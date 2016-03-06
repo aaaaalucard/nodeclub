@@ -1,16 +1,15 @@
-
 var eventproxy = require('eventproxy');
-var validator = require('validator');
-var Topic = require('../../proxy').Topic;
-var User = require('../../proxy').User;
-var Reply = require('../../proxy').Reply;
-var at = require('../../common/at');
-var message = require('../../common/message');
-var config = require('../../config');
+var validator  = require('validator');
+var Topic      = require('../../proxy').Topic;
+var User       = require('../../proxy').User;
+var Reply      = require('../../proxy').Reply;
+var at         = require('../../common/at');
+var message    = require('../../common/message');
+var config     = require('../../config');
 
 var create = function (req, res, next) {
   var topic_id = req.params.topic_id;
-  var content = req.body.content;
+  var content  = req.body.content || '';
   var reply_id = req.body.reply_id;
 
   var ep = new eventproxy();
@@ -28,6 +27,10 @@ var create = function (req, res, next) {
       res.status(404);
       res.send({error_msg: 'topic `' + topic_id + '` not found'});
       return;
+    }
+    if (topic.lock) {
+      res.status(403);
+      return res.send({error_msg: 'topic is locked'});
     }
     ep.emit('topic', topic);
   }));
@@ -73,7 +76,8 @@ exports.create = create;
 
 var ups = function (req, res, next) {
   var replyId = req.params.reply_id;
-  var userId = req.user.id;
+  var userId  = req.user.id;
+
   Reply.getReplyById(replyId, function (err, reply) {
     if (err) {
       return next(err);
